@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7
+    container_name: bots_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  postgres:
+    image: postgres:16
+    container_name: bots_postgres
+    environment:
+      POSTGRES_DB: bots
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  selenoid:
+    image: aerokube/selenoid:latest
+    container_name: selenoid
+    restart: unless-stopped
+    ports:
+      - "4444:4444"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./browsers.json:/etc/selenoid/browsers.json"
+      - "./video:/opt/selenoid/video"
+      - "./logs:/opt/selenoid/logs"
+    command: [
+      "-limit", "5",
+      "-timeout", "3m",
+      "-session-attempt-timeout", "3m",
+      "-container-network", "bridge"
+    ]
+
+  selenoid-ui:
+    image: aerokube/selenoid-ui:latest
+    container_name: selenoid_ui
+    restart: unless-stopped
+    ports:
+      - "9090:8080"
+    depends_on:
+      - selenoid
+    command: [
+      "--selenoid-uri", "http://selenoid:4444"
+    ]
+
+volumes:
+  redis_data:
+  pg_data:
